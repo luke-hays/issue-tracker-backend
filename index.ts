@@ -1,7 +1,24 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import express, { Express } from 'express';
 import { ApolloServer } from 'apollo-server-express';
 import fs from 'fs';
+import { GraphQLScalarType, Kind } from 'graphql';
+
+const gqlDate = new GraphQLScalarType({
+  name: 'Date',
+  description: 'A Date() type in GraphQL as a scalar',
+  serialize(value: any) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    return value.toISOString();
+  },
+  parseValue(value: any) {
+    return new Date(value);
+  },
+  parseLiteral(ast) {
+    return (ast.kind == Kind.STRING) ? new Date(ast.value) : undefined;
+  }
+});
 
 const PORT = 3001;
 
@@ -18,6 +35,7 @@ const issuesDB = [
     title: 'Missing bottom border on panel',
   },
 ];
+console.log(issuesDB);
 const resolvers = {
   Query: {
     about: () => aboutMessage,
@@ -25,8 +43,17 @@ const resolvers = {
   },
   Mutation: {
     setAboutMessage,
+    issueAdd,
   },
+  gqlDate,
 };
+function issueAdd(_: any, { issue }: any): any {
+  issue.created = new Date();
+  issue.id = issuesDB.length + 1;
+  if (issue.status == undefined) issue.status = 'New';
+  issuesDB.push(issue);
+  return issue;
+}
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function setAboutMessage(_: any, { message }: any): any {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
